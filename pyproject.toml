@@ -1,0 +1,10 @@
+[project]
+name = "dbt-repo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12.9"
+dependencies = [
+    "dbt-bigquery~=1.9.0",
+    "dbt-core~=1.9.0",
+]

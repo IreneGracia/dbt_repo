@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: staging_model
+    description: >
+      Last three months of raw Bitcoin Cash transactions from the public
+      `bigquery-public-data.crypto_bitcoin_cash.transactions` table. Filtered to
+      the recent monthly partitions so queries stay within the BigQuery free tier.
+    columns:
+      - name: hash
+        description: "Transaction hash. Natural key of a transaction."
+        data_tests:
+          - unique
+          - not_null
+      - name: block_timestamp
+        description: "Timestamp the transaction's block was mined (UTC)."
+        data_tests:
+          - not_null
+      - name: is_coinbase
+        description: "True when this is a coinbase (newly-minted / miner reward) transaction."
+        data_tests:
+          - not_null
+
+  - name: mart_model
+    description: >
+      Current balance per address over the staged 3-month window, computed as
+      sum(received outputs) - sum(spent inputs). Addresses that ever appeared in a
+      coinbase transaction are excluded per the challenge brief.
+    columns:
+      - name: address
+        description: "Bitcoin Cash address."
+        data_tests:
+          - unique
+          - not_null
+      - name: balance
+        description: "Net balance (satoshis) across the staged window."
+        data_tests:
+          - not_null

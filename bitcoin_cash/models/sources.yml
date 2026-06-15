@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: crypto_bitcoin_cash
+    description: "Google public Bitcoin Cash blockchain dataset."
+    database: bigquery-public-data      # ← the GCP project that hosts it
+    schema: crypto_bitcoin_cash         # ← the dataset
+    tables:
+      - name: transactions
+        description: "One row per Bitcoin Cash transaction, with nested inputs/outputs."

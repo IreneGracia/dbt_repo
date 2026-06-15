@@ -1,0 +1,50 @@
+on:
+  pull_request:
+    branches: [main]
+
+
+permissions:
+  contents: read
+  id-token: write
+
+
+env:
+  DBT_TARGET: ci
+  DBT_PROFILES_DIR: ${{ github.workspace }}
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  BQ_LOCATION: ${{ vars.BQ_LOCATION }}
+
+
+jobs:
+  dbt-run:
+    name: dbt deps + run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+
+      # `uv sync` reads pyproject.toml + uv.lock, provisions the Python pinned
+      # in .python-version, and installs the exact locked dependency versions.
+      - name: Install dbt and dependencies
+        run: uv sync
+
+      # Authenticate AS the Terraform-provisioned service account, keyless.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Install dbt packages
+        run: uv run dbt deps
+
+      - name: Verify connection
+        run: uv run dbt debug --target ci
+
+      - name: dbt run
+        run: uv run dbt run --target ci
