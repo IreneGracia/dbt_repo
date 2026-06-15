@@ -1,28 +1,22 @@
--- Staging model: the most recent three months of Bitcoin Cash transactions that
--- actually exist in the source.
---
--- The public `crypto_bitcoin_cash` dataset is frozen (last data ~May 2024), so
--- current_date() would select an empty future window. Instead we look up the
--- latest populated month at COMPILE time from INFORMATION_SCHEMA.PARTITIONS
--- (metadata only — free, no table scan) and embed it as a literal. Because it's
--- a literal, BigQuery still prunes partitions, so the main query stays inside the
--- free tier. (A subquery for the max date would block pruning and scan the whole
--- table.)
 {%- set src = source('crypto_bitcoin_cash', 'transactions') -%}
-
 {%- set latest_date_query -%}
   select format_date('%Y-%m-%d', max(parse_date('%Y%m%d', partition_id)))
   from `{{ src.database }}.{{ src.schema }}.INFORMATION_SCHEMA.PARTITIONS`
   where table_name = '{{ src.identifier }}'
     and partition_id not in ('__NULL__', '__UNPARTITIONED__')
 {%- endset -%}
-
 {%- if execute -%}
   {%- set anchor_date = run_query(latest_date_query).rows[0][0] -%}
 {%- else -%}
   {%- set anchor_date = '1970-01-01' -%}
-{%- endif -%}
+{%- endif %}
 
+-- Staging model: the most recent three months of Bitcoin Cash transactions that
+-- actually exist in the source. The public `crypto_bitcoin_cash` dataset is
+-- frozen (last data ~May 2024), so current_date() would select an empty future
+-- window. Instead we look up the latest populated month at COMPILE time from
+-- INFORMATION_SCHEMA.PARTITIONS (metadata only — free, no table scan) and embed
+-- it as a literal, which keeps partition pruning on so queries stay free-tier.
 with source as (
   select *
   from {{ src }}
