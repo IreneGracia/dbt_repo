@@ -11,12 +11,13 @@ profile: 'bitcoin_cash'
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
 # found in the "models/" directory. You probably won't need to change these!
-model-paths: ["models"]
-analysis-paths: ["analyses"]
-test-paths: ["tests"]
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
+# The project content lives under bitcoin_cash/, so every path is prefixed.
+model-paths: ["bitcoin_cash/models"]
+analysis-paths: ["bitcoin_cash/analyses"]
+test-paths: ["bitcoin_cash/tests"]
+seed-paths: ["bitcoin_cash/seeds"]
+macro-paths: ["bitcoin_cash/macros"]
+snapshot-paths: ["bitcoin_cash/snapshots"]
 
 clean-targets:         # directories to be removed by `dbt clean`
   - "target"
