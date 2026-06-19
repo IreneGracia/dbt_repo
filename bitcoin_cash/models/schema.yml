@@ -8,6 +8,10 @@ models:
       the recent monthly partitions so queries stay within the BigQuery free tier.
     columns:
       - name: hash
+        # `hash` is a reserved keyword in BigQuery, so dbt must quote it
+        # (-> `hash`) when generating test SQL, otherwise the column reference
+        # parses as the keyword and fails with "Unexpected keyword HASH".
+        quote: true
         description: "Transaction hash. Natural key of a transaction."
         data_tests:
           - unique

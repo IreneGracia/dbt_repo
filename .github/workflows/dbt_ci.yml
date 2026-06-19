@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
 
@@ -46,5 +46,8 @@ jobs:
       - name: Verify connection
         run: uv run dbt debug --target ci
 
-      - name: dbt run
-        run: uv run dbt run --target ci
+      # `dbt build` runs models AND tests (and seeds/snapshots) in DAG order,
+      # so a failing data test — e.g. a coinbase address leaking into the mart —
+      # fails the job and blocks the PR. (`dbt run` alone would skip the tests.)
+      - name: dbt build
+        run: uv run dbt build --target ci
