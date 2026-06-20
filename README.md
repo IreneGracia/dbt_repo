@@ -3,7 +3,7 @@
 A dbt-core project that turns the public Bitcoin Cash dataset into a staging table
 and a per-address balance mart, tested and CI-validated on every pull request.
 
-> **Run [`terraform_repo`](../terraform_repo/README.md) first** — it creates the
+> **Run [`terraform_repo`](../terraform_repo/README.md) first**: it creates the
 > `staging`/`mart` datasets and the `dbt-runner` service account (plus the CI
 > credentials) that this project depends on.
 
