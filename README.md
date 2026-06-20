@@ -25,7 +25,7 @@ transactions). This source is read-only and never modified.
    coinbase payout.
 
 **Outflow.** 
-`mart_model` — one row per address with its net balance, which is the
+`mart_model`: one row per address with its net balance, which is the
 consumable product, ready to feed BI dashboards or ML features. `staging_model`
 is the intermediate layer the mart is built from.
 
