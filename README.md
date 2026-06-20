@@ -34,6 +34,9 @@ consumable product, ready to feed BI dashboards or ML features. `staging_model`
 is the intermediate layer the mart is built from.
 
 
+<br>
+
+
 
 ## Models
 
@@ -44,6 +47,9 @@ is the intermediate layer the mart is built from.
 
 
 **Assumption: windowed balance.** Staging is limited to 3 months to stay in the free tier, so the mart balance is the net change over those 3 months, not an address's all-time balance (which would require scanning full history). This is the deliberate, free-tier-consistent reading of the brief's "current balance".
+
+
+<br>
 
 
 ### `staging_model`
@@ -87,6 +93,9 @@ A passthrough of the source schema (`select *`), materialised as a table in the 
 
 All other raw columns (`block_number`, `fee`, `size`, `input_count`, etc.) are carried through unchanged.
 
+<br>
+
+
 
 ### `mart_model`
 
@@ -119,6 +128,9 @@ One row per address, materialised as a table in the `mart` dataset, the consumab
 | `balance` | NUMERIC | Net balance over the staged window = Σ(received) − Σ(spent)|
 
 
+<br>
+
+
 ## Tests
 
 `dbt build` runs all ten on every PR; any failure blocks the merge.
@@ -135,6 +147,9 @@ One row per address, materialised as a table in the `mart` dataset, the consumab
 | `not_null` on `mart.balance` | built-in generic | Every address has a computed balance. |
 | [`assert_no_coinbase_addresses_in_mart`](bitcoin_cash/tests/assert_no_coinbase_addresses_in_mart.sql) | singular (custom) | **Core rule:** no coinbase address leaked into the mart. |
 | [`assert_staging_within_three_months`](bitcoin_cash/tests/assert_staging_within_three_months.sql) | singular (custom) | No transaction older than 3 months before the latest: enforces the strict window. |
+
+
+<br>
 
 
 ## Sources, macros & packages
@@ -160,11 +175,17 @@ Beyond models and tests, the project uses these dbt building blocks:
 - **Materialisations**: both models are materialised as tables, so the mart and staging outputs persist as queryable BigQuery tables.
 
 
+<br>
+
+
 ## Prerequisites
 
 - **uv**: https://docs.astral.sh/uv/getting-started/installation/ provisions Python 3.12.9 + dbt; no separate Python install needed.
 - **gcloud**: https://cloud.google.com/sdk/docs/install — for local Application Default Credentials.
 - The GCP project + datasets from `terraform_repo`, and a Google identity with BigQuery access (project Owner suffices). Local runs happen as users, not the service account.
+
+
+<br>
 
 
 ## Run locally
@@ -185,6 +206,9 @@ uv run dbt build                     # build models and run all tests
 Append `--target ci` to use the CI profile.
 
 
+<br>
+
+
 ## Continuous Integration
 
 [`.github/workflows/dbt_ci.yml`](.github/workflows/dbt_ci.yml) runs on every PR to `main`/`master`:
@@ -194,10 +218,16 @@ Append `--target ci` to use the CI profile.
 3. `dbt deps` → `dbt debug` → `dbt build` — so a failing test (e.g. a coinbase address in the mart) fails the job and blocks the merge.
 
 
+<br>
+
+
 ## Configuration
 
 - [`profiles.yml`](profiles.yml): committed and fully env-var driven (no secrets), with two targets: `dev` (default, local, authenticates as you) and `ci` (the pipeline, authenticates as the SA).
 - [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql): overrides dbt's default `<target>_<schema>` naming so models land in the bare `staging`/`mart` datasets Terraform created.
+
+<br>
+
 
 
 ## Project structure
@@ -217,6 +247,9 @@ dbt_repo/
     ├── tests/               # singular (custom-SQL) tests
     └── macros/              # generate_schema_name override
 ```
+
+<br>
+
 
 ## Design choices
 
