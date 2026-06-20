@@ -10,6 +10,7 @@ and a per-address balance mart, tested and CI-validated on every pull request.
 ## What this project does
 
 **Inflow.** 
+
 Reads the public, append-only Bitcoin Cash ledger
 (`bigquery-public-data.crypto_bitcoin_cash.transactions`): one row per transaction,
 each carrying nested inputs (coins being spent), nested outputs (coins being
@@ -25,6 +26,7 @@ transactions). This source is read-only and never modified.
    coinbase payout.
 
 **Outflow.** 
+
 `mart_model`: one row per address with its net balance, which is the
 consumable product, ready to feed BI dashboards or ML features. `staging_model`
 is the intermediate layer the mart is built from.
@@ -45,9 +47,11 @@ is the intermediate layer the mart is built from.
 ### `staging_model`
 
 **Purpose.** 
+
 Produce a clean, partition-pruned copy of the last three months of raw transactions.
 
 **How the window is anchored** 
+
 The window can't use `current_date()`, because the public dataset is frozen (~May 2024) so "now
 minus 3 months" would select an empty future range. Instead the anchor is computed
 at compile time in two cheap steps:
@@ -60,12 +64,14 @@ at compile time in two cheap steps:
 That date becomes `anchor_date`, embedded as a literal in the model's SQL.
 
 **The filter.** 
+
 Two predicates do the work:
 - `block_timestamp_month >= date_trunc(anchor_date - 3 months, month)`: prunes whole
   partitions outside the window so BigQuery scans the minimum.
 - `block_timestamp >= anchor_date - 3 months`: the strict, day-precise cutoff.
 
 **Output schema.** 
+
 A passthrough of the source schema (`select *`), materialised as a table in the `staging` dataset. The columns the rest of the project relies on:
 
 | Column | Type | Notes |
@@ -83,6 +89,7 @@ All other raw columns (`block_number`, `fee`, `size`, `input_count`, etc.) are c
 ### `mart_model`
 
 **Purpose.** 
+
 Collapse transactions into **one row per address** with its net balance,
 excluding addresses tied to coinbase (mined) coins. Built entirely from
 `staging_model`, so it inherits the 3-month window.
@@ -101,6 +108,7 @@ excluding addresses tied to coinbase (mined) coins. Built entirely from
    NULL-safe `NOT IN` (`where address is not null` inside the subquery).
 
 **Output schema.** 
+
 One row per address, materialised as a table in the `mart` dataset, the consumable product:
 
 | Column | Type | Description |
