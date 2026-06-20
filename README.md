@@ -232,9 +232,9 @@ Append `--target ci` to use the CI profile.
 
 [`.github/workflows/dbt_ci.yml`](.github/workflows/dbt_ci.yml) runs on every PR to `main`/`master`:
 
-1. `uv sync` — install dbt and dependencies.
+1. `uv sync`: install dbt and dependencies.
 2. Keyless auth to GCP via Workload Identity Federation, as the `dbt-runner` SA. The WIF provider, SA email, project id, and location are injected by Terraform: no manual GitHub setup.
-3. `dbt deps` → `dbt debug` → `dbt build` — so a failing test (e.g. a coinbase address in the mart) fails the job and blocks the merge.
+3. `dbt deps` → `dbt debug` → `dbt build` so a failing test (e.g. a coinbase address in the mart) fails the job and blocks the merge.
 
 
 <br>
