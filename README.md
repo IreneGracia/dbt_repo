@@ -36,6 +36,25 @@ is the intermediate layer the mart is built from.
 
 <br>
 
+## Project structure
+
+```
+dbt_repo/
+├── dbt_project.yml          # paths, materialisations, target schemas
+├── packages.yml             # dbt package deps (dbt_utils)
+├── profiles.yml             # dev + ci targets
+├── pyproject.toml / uv.lock # Python + dbt version pins
+└── bitcoin_cash/
+    ├── models/
+    │   ├── sources.yml      # public source declaration
+    │   ├── schema.yml       # model/column docs + generic tests
+    │   ├── staging/staging_model.sql
+    │   └── mart/mart_model.sql
+    ├── tests/               # singular (custom-SQL) tests
+    └── macros/              # generate_schema_name override
+```
+
+<br>
 
 
 ## Models
@@ -145,7 +164,7 @@ One row per address, materialised as a table in the `mart` dataset, the consumab
 | `unique` on `mart.address` | built-in generic | One balance row per address. |
 | `not_null` on `mart.address` | built-in generic | No null addresses. |
 | `not_null` on `mart.balance` | built-in generic | Every address has a computed balance. |
-| [`assert_no_coinbase_addresses_in_mart`](bitcoin_cash/tests/assert_no_coinbase_addresses_in_mart.sql) | singular (custom) | **Core rule:** no coinbase address leaked into the mart. |
+| [`assert_no_coinbase_addresses_in_mart`](bitcoin_cash/tests/assert_no_coinbase_addresses_in_mart.sql) | singular (custom) | No coinbase address leaked into the mart. |
 | [`assert_staging_within_three_months`](bitcoin_cash/tests/assert_staging_within_three_months.sql) | singular (custom) | No transaction older than 3 months before the latest: enforces the strict window. |
 
 
@@ -225,28 +244,6 @@ Append `--target ci` to use the CI profile.
 
 - [`profiles.yml`](profiles.yml): committed and fully env-var driven (no secrets), with two targets: `dev` (default, local, authenticates as you) and `ci` (the pipeline, authenticates as the SA).
 - [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql): overrides dbt's default `<target>_<schema>` naming so models land in the bare `staging`/`mart` datasets Terraform created.
-
-<br>
-
-
-
-## Project structure
-
-```
-dbt_repo/
-├── dbt_project.yml          # paths, materializations, target schemas
-├── packages.yml             # dbt package deps (dbt_utils)
-├── profiles.yml             # dev + ci targets (env-var driven)
-├── pyproject.toml / uv.lock # Python + dbt version pins (uv)
-└── bitcoin_cash/
-    ├── models/
-    │   ├── sources.yml      # public source declaration
-    │   ├── schema.yml       # model/column docs + generic tests
-    │   ├── staging/staging_model.sql
-    │   └── mart/mart_model.sql
-    ├── tests/               # singular (custom-SQL) tests
-    └── macros/              # generate_schema_name override
-```
 
 <br>
 
