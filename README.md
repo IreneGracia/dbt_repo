@@ -38,7 +38,7 @@ is the intermediate layer the mart is built from.
 | [`mart_model`](bitcoin_cash/models/mart/mart_model.sql) | table → `mart` | **Balance per address** = Σ(outputs received) − Σ(inputs spent) over the staged window. Addresses that ever appeared in a coinbase transaction are excluded via a NULL-safe `NOT IN`. |
 
 
-**Assumption: windowed balance.** Staging is limited to 3 months to stay in the free tier, so the mart balance is the **net change over those 3 months**, not an address's all-time balance (which would require scanning full history). This is the deliberate, free-tier-consistent reading of the brief's "current balance".
+**Assumption: windowed balance.** Staging is limited to 3 months to stay in the free tier, so the mart balance is the net change over those 3 months, not an address's all-time balance (which would require scanning full history). This is the deliberate, free-tier-consistent reading of the brief's "current balance".
 
 ### `staging_model`
 
