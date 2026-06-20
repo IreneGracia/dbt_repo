@@ -77,6 +77,7 @@ A passthrough of the source schema (`select *`), materialised as a table in the 
 
 All other raw columns (`block_number`, `fee`, `size`, `input_count`, etc.) are carried through unchanged.
 
+
 ### `mart_model`
 
 **Purpose.** 
@@ -104,6 +105,7 @@ One row per address, materialised as a table in the `mart` dataset, the consumab
 |--------|------|-------------|
 | `address` | STRING | Bitcoin Cash address (unique, not null). |
 | `balance` | NUMERIC | Net balance over the staged window = Σ(received) − Σ(spent)|
+
 
 ## Tests
 
@@ -145,11 +147,13 @@ Beyond models and tests, the project uses these dbt building blocks:
 
 - **Materialisations** — both models are materialised as tables, so the mart and staging outputs persist as queryable BigQuery tables.
 
+
 ## Prerequisites
 
 - **uv**: https://docs.astral.sh/uv/getting-started/installation/ provisions Python 3.12.9 + dbt; no separate Python install needed.
 - **gcloud**: https://cloud.google.com/sdk/docs/install — for local Application Default Credentials.
 - The GCP project + datasets from `terraform_repo`, and a Google identity with BigQuery access (project Owner suffices). Local runs happen as users, not the service account.
+
 
 ## Run locally
 
@@ -168,6 +172,7 @@ uv run dbt build                     # build models and run all tests
 
 Append `--target ci` to use the CI profile.
 
+
 ## Continuous Integration
 
 [`.github/workflows/dbt_ci.yml`](.github/workflows/dbt_ci.yml) runs on every PR to `main`/`master`:
@@ -176,10 +181,12 @@ Append `--target ci` to use the CI profile.
 2. Keyless auth to GCP via Workload Identity Federation, as the `dbt-runner` SA. The WIF provider, SA email, project id, and location are injected by Terraform: no manual GitHub setup.
 3. `dbt deps` → `dbt debug` → `dbt build` — so a failing test (e.g. a coinbase address in the mart) fails the job and blocks the merge.
 
+
 ## Configuration
 
 - [`profiles.yml`](profiles.yml): committed and fully env-var driven (no secrets), with two targets: `dev` (default, local, authenticates as you) and `ci` (the pipeline, authenticates as the SA).
 - [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql): overrides dbt's default `<target>_<schema>` naming so models land in the bare `staging`/`mart` datasets Terraform created.
+
 
 ## Project structure
 
