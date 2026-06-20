@@ -200,7 +200,7 @@ Beyond models and tests, the project uses these dbt building blocks:
 ## Prerequisites
 
 - **uv**: https://docs.astral.sh/uv/getting-started/installation/ provisions Python 3.12.9 + dbt; no separate Python install needed.
-- **gcloud**: https://cloud.google.com/sdk/docs/install — for local Application Default Credentials.
+- **gcloud**: https://cloud.google.com/sdk/docs/install for local Application Default Credentials.
 - The GCP project + datasets from `terraform_repo`, and a Google identity with BigQuery access (project Owner suffices). Local runs happen as users, not the service account.
 
 
