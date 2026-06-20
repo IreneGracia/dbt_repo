@@ -1,4 +1,4 @@
-# dbt — Bitcoin Cash transformations
+# dbt repo
 
 A dbt-core project that turns the public Bitcoin Cash dataset into a staging table
 and a per-address balance mart, tested and CI-validated on every pull request.
@@ -9,48 +9,38 @@ and a per-address balance mart, tested and CI-validated on every pull request.
 
 ## What this project does
 
-**Inflow.** Reads the public, append-only Bitcoin Cash ledger
+**Inflow.** 
+Reads the public, append-only Bitcoin Cash ledger
 (`bigquery-public-data.crypto_bitcoin_cash.transactions`) — one row per transaction,
-each carrying nested `inputs` (coins being spent), nested `outputs` (coins being
-received), the block timestamp, and an `is_coinbase` flag (true for mined/block-reward
+each carrying nested inputs (coins being spent), nested outputs (coins being
+received), the block timestamp and an is_coinbase flag (true for mined/block-reward
 transactions). This source is read-only and never modified.
 
 **Transform.**
-1. **`staging_model`** narrows the firehose to a **strict last-3-months** slice,
-   partition-pruned so it stays in the free tier — a clean, time-bounded copy of the
-   raw transactions.
-2. **`mart_model`** turns those transactions into an **address ledger**: it unnests
-   every output (`+value` received) and every input (`−value` spent), sums them per
-   address to get a **net balance**, and excludes any address that ever received a
-   coinbase (mined) payout.
+1. **`staging_model`** narrows the data to a slice of the last 3 months,
+   partition-pruned.
+2. **`mart_model`** turns those transactions into an address ledger: it unnests
+   every output (+value received) and every input (−value spent), sums them per
+   address to get a net balance and excludes any address that ever received a
+   coinbase payout.
 
-**Outflow.** **`mart.mart_model`** — one row per address with its net balance — is the
-consumable product, ready to feed BI dashboards or ML features. `staging.staging_model`
+**Outflow.** 
+`mart_model` — one row per address with its net balance, which is the
+consumable product, ready to feed BI dashboards or ML features. `staging_model`
 is the intermediate layer the mart is built from.
 
-```
-bigquery-public-data.crypto_bitcoin_cash.transactions   ← inflow (read-only source)
-        │   staging_model  — strict last 3 months, partition-pruned
-        ▼
-   staging.staging_model                                  (intermediate)
-        │   mart_model     — unnest inputs/outputs → net balance per address,
-        ▼                     coinbase addresses excluded
-     mart.mart_model                                       → outflow (BI / ML consumes this)
-```
 
 ## Models
 
-| Model | Materialized | Description |
+| Model | Materialised | Description |
 |-------|--------------|-------------|
-| [`staging_model`](bitcoin_cash/models/staging/staging_model.sql) | table → `staging` | A **strict 3-month window** ending at the latest transaction date. The anchor is resolved at compile time (the public dataset is frozen ~May 2024, so `current_date()` would yield an empty window): a free metadata lookup finds the latest partition, then a tiny partition-pruned query reads the true latest date. Pruned on `block_timestamp_month` to stay free-tier. |
-| [`mart_model`](bitcoin_cash/models/mart/mart_model.sql) | table → `mart` | **Balance per address** = Σ(outputs received) − Σ(inputs spent) over the staged window. Addresses that ever appeared in a coinbase (block-reward) transaction are excluded via a NULL-safe `NOT IN`. |
+| [`staging_model`](bitcoin_cash/models/staging/staging_model.sql) | table → `staging` | A **strict 3-month window** ending at the latest transaction date. The anchor is resolved at compile time (the public dataset is frozen ~May 2024, so `current_date()` would yield an empty window): a free metadata lookup finds the latest partition, then a small partition-pruned query reads the true latest date. Pruned on `block_timestamp_month` to stay free-tier. |
+| [`mart_model`](bitcoin_cash/models/mart/mart_model.sql) | table → `mart` | **Balance per address** = Σ(outputs received) − Σ(inputs spent) over the staged window. Addresses that ever appeared in a coinbase transaction are excluded via a NULL-safe `NOT IN`. |
 
-> **Assumption — windowed balance.** Staging is limited to 3 months to stay in the
-> free tier, so the mart balance is the **net change over those 3 months**, not an
-> address's all-time balance (which would require scanning full history). This is
-> the deliberate, free-tier-consistent reading of the brief's "current balance".
 
-### `staging_model` — a time-bounded copy of the raw ledger
+**Assumption: windowed balance.** Staging is limited to 3 months to stay in the free tier, so the mart balance is the **net change over those 3 months**, not an address's all-time balance (which would require scanning full history). This is the deliberate, free-tier-consistent reading of the brief's "current balance".
+
+### `staging_model`
 
 **Purpose.** Produce a clean, partition-pruned copy of just the **last three
 months** of raw transactions — the foundation the mart is built on, and the layer
