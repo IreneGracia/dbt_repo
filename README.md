@@ -11,7 +11,7 @@ and a per-address balance mart, tested and CI-validated on every pull request.
 
 ## What this project does
 
-**Inflow.** 
+**Inflow** 
 
 Reads the public, append-only Bitcoin Cash ledger
 (`bigquery-public-data.crypto_bitcoin_cash.transactions`): one row per transaction,
@@ -19,7 +19,7 @@ each carrying nested inputs (coins being spent), nested outputs (coins being
 received), the block timestamp and an is_coinbase flag (true for mined/block-reward
 transactions). This source is read-only and never modified.
 
-**Transform.**
+**Transform**
 1. **`staging_model`** narrows the data to a slice of the last 3 months,
    partition-pruned.
 2. **`mart_model`** turns those transactions into an address ledger: it unnests
@@ -27,7 +27,7 @@ transactions). This source is read-only and never modified.
    address to get a net balance and excludes any address that ever received a
    coinbase payout.
 
-**Outflow.** 
+**Outflow** 
 
 `mart_model`: one row per address with its net balance, which is the
 consumable product, ready to feed BI dashboards or ML features. `staging_model`
@@ -73,7 +73,7 @@ dbt_repo/
 
 ### `staging_model`
 
-**Purpose.** 
+**Purpose** 
 
 Produce a clean, partition-pruned copy of the last three months of raw transactions.
 
@@ -90,14 +90,14 @@ at compile time in two cheap steps:
 
 That date becomes `anchor_date`, embedded as a literal in the model's SQL.
 
-**The filter.** 
+**The filter** 
 
 Two predicates do the work:
 - `block_timestamp_month >= date_trunc(anchor_date - 3 months, month)`: prunes whole
   partitions outside the window so BigQuery scans the minimum.
 - `block_timestamp >= anchor_date - 3 months`: the strict, day-precise cutoff.
 
-**Output schema.** 
+**Output schema** 
 
 A passthrough of the source schema (`select *`), materialised as a table in the `staging` dataset. The columns the rest of the project relies on:
 
@@ -118,7 +118,7 @@ All other raw columns (`block_number`, `fee`, `size`, `input_count`, etc.) are c
 
 ### `mart_model`
 
-**Purpose.** 
+**Purpose** 
 
 Collapse transactions into **one row per address** with its net balance,
 excluding addresses tied to coinbase (mined) coins. Built entirely from
@@ -137,7 +137,7 @@ excluding addresses tied to coinbase (mined) coins. Built entirely from
 4. **Final select**: returns `address, balance`, excluding coinbase addresses with a
    NULL-safe `NOT IN` (`where address is not null` inside the subquery).
 
-**Output schema.** 
+**Output schema** 
 
 One row per address, materialised as a table in the `mart` dataset, the consumable product:
 
