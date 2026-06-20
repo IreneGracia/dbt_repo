@@ -3,9 +3,11 @@ version: 2
 models:
   - name: staging_model
     description: >
-      Last three months of raw Bitcoin Cash transactions from the public
-      `bigquery-public-data.crypto_bitcoin_cash.transactions` table. Filtered to
-      the recent monthly partitions so queries stay within the BigQuery free tier.
+      A strict three-month window of raw Bitcoin Cash transactions ending at the
+      latest transaction date in the public
+      `bigquery-public-data.crypto_bitcoin_cash.transactions` table. Partition-
+      pruned on the monthly partition column so queries stay within the BigQuery
+      free tier.
     data_tests:
       # Partition-column integrity: the monthly partition column must match the
       # actual timestamp's month, otherwise the partition pruning that keeps the

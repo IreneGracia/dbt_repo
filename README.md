@@ -13,7 +13,7 @@ every pull request.
 
 | Model | Materialization | Description |
 |-------|-----------------|-------------|
-| [`staging_model`](bitcoin_cash/models/staging/staging_model.sql) | table (`staging` dataset) | The **last three months** of `bigquery-public-data.crypto_bitcoin_cash.transactions`. Filtered on the monthly partition column for cheap partition pruning, then trimmed to an exact 3-month window. The window is anchored at **compile time** to the latest data that actually exists (the public dataset is frozen ~May 2024), so `current_date()` wouldn't return an empty window. |
+| [`staging_model`](bitcoin_cash/models/staging/staging_model.sql) | table (`staging` dataset) | A **strict three-month window** of `bigquery-public-data.crypto_bitcoin_cash.transactions`, ending at the **latest transaction date**. The anchor is resolved at **compile time** (the public dataset is frozen ~May 2024, so `current_date()` would give an empty window): a free metadata lookup finds the latest partition, then a tiny partition-pruned query reads the true latest date. Partition pruning on `block_timestamp_month` keeps it in the free tier. |
 | [`mart_model`](bitcoin_cash/models/mart/mart_model.sql) | table (`mart` dataset) | **Current balance per address** = sum(outputs received) − sum(inputs spent). Any address that ever appeared in a coinbase transaction is excluded. |
 
 Sources are declared in [`sources.yml`](bitcoin_cash/models/sources.yml); column

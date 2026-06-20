@@ -1,15 +1,15 @@
--- Singular test: the staging model must contain ONLY the last three months of
--- data. Because the public source is frozen, the window is anchored to the
--- latest transaction actually present (max block_timestamp), not current_date()
--- — this mirrors the compile-time anchor logic in the staging model and proves
--- that the 3-month filter actually worked.
+-- Singular test: the staging model must contain only the last three months of
+-- data, day-precise. The window is anchored to the latest transaction present
+-- (the source is frozen, so it can't use current_date()). The staging model now
+-- anchors to the true latest transaction DATE, so this strict, day-precise check
+-- holds exactly — a row more than three months older than the latest one means
+-- the window filter is too wide.
 --
 -- This is a singular (not a generic) test because the cutoff is data-derived:
--- it needs a self-referential max() over the model, which a per-row generic
--- test like expression_is_true cannot express cleanly.
+-- it needs a self-referential max() over the model.
 --
--- A dbt test passes when it returns ZERO rows. Any row returned is a transaction
--- older than the allowed window, which fails the test (and the PR).
+-- A dbt test passes when it returns ZERO rows. Any row returned fails the test
+-- (and, in CI, the pull request).
 
 with anchor as (
 
