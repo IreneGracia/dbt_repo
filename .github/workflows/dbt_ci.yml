@@ -9,7 +9,6 @@ permissions:
 
 
 env:
-  DBT_TARGET: ci
   DBT_PROFILES_DIR: ${{ github.workspace }}
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   BQ_LOCATION: ${{ vars.BQ_LOCATION }}
