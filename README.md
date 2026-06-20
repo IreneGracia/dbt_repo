@@ -11,7 +11,7 @@ and a per-address balance mart, tested and CI-validated on every pull request.
 
 **Inflow.** 
 Reads the public, append-only Bitcoin Cash ledger
-(`bigquery-public-data.crypto_bitcoin_cash.transactions`) — one row per transaction,
+(`bigquery-public-data.crypto_bitcoin_cash.transactions`): one row per transaction,
 each carrying nested inputs (coins being spent), nested outputs (coins being
 received), the block timestamp and an is_coinbase flag (true for mined/block-reward
 transactions). This source is read-only and never modified.
