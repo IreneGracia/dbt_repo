@@ -5,7 +5,9 @@ with staging as (
 
 ),
 
--- Addresses that ever received freshly-minted coins (miners) — to exclude
+-- Sees addresses that received coinbase transactions so as to exclude them from the
+-- output later on
+
 coinbase_addresses as (
 
     select distinct addr as address
@@ -27,6 +29,7 @@ ledger as (
     union all
 
     -- spent
+    -- negative value so as to substract outflows to calculate the resulting balande
     select addr as address, -i.value as amount
     from staging
     cross join unnest(inputs) as i
@@ -44,10 +47,11 @@ balances as (
 
 )
 
+
 select b.address, b.balance
 from balances b
 where b.address not in (
     select address
     from coinbase_addresses
-    where address is not null      -- guards against the NULL trap
+    where address is not null
 )

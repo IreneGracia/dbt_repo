@@ -6,19 +6,19 @@ models:
       A strict three-month window of raw Bitcoin Cash transactions ending at the
       latest transaction date in the public
       `bigquery-public-data.crypto_bitcoin_cash.transactions` table. Partition-
-      pruned on the monthly partition column so queries stay within the BigQuery
-      free tier.
+      pruned on the monthly partition column.
     data_tests:
       # Partition-column integrity: the monthly partition column must match the
-      # actual timestamp's month, otherwise the partition pruning that keeps the
-      # staging query in the free tier can't be trusted. (dbt_utils package.)
+      # actual timestamp's month.
       - dbt_utils.expression_is_true:
           expression: "block_timestamp_month = date(timestamp_trunc(block_timestamp, month))"
+
+    #Lists columns that are load-bearing and therefore should be documented or tested
     columns:
       - name: hash
         # `hash` is a reserved keyword in BigQuery, so dbt must quote it
-        # (-> `hash`) when generating test SQL, otherwise the column reference
-        # parses as the keyword and fails with "Unexpected keyword HASH".
+        # when generating test SQL, otherwise the column reference
+        # parses as the keyword and fails with "Unexpected keyword HASH"
         quote: true
         description: "Transaction hash. Natural key of a transaction."
         data_tests:
@@ -29,7 +29,7 @@ models:
         data_tests:
           - not_null
       - name: is_coinbase
-        description: "True when this is a coinbase (newly-minted / miner reward) transaction."
+        description: "True when this is a coinbase transaction."
         data_tests:
           - not_null
 
@@ -37,7 +37,7 @@ models:
     description: >
       Current balance per address over the staged 3-month window, computed as
       sum(received outputs) - sum(spent inputs). Addresses that ever appeared in a
-      coinbase transaction are excluded per the challenge brief.
+      coinbase transaction are excluded.
     columns:
       - name: address
         description: "Bitcoin Cash address."
@@ -45,6 +45,6 @@ models:
           - unique
           - not_null
       - name: balance
-        description: "Net balance (satoshis) across the staged window."
+        description: "Net balance across the staged window."
         data_tests:
           - not_null

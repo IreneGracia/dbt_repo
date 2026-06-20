@@ -1,26 +1,17 @@
 {%- set src = source('crypto_bitcoin_cash', 'transactions') -%}
 
-{#
-  Anchor the 3-month window to the LATEST TRANSACTION DATE so the staging table
-  holds a strict last-three-months slice (e.g. 24 Feb -> 24 May), per the brief's
-  "only the last three months of data".
+-- Anchor the 3-month window to the LATEST TRANSACTION DATE (the dataset is frozen
+-- ~May 2024, so current_date() would be empty). Resolved at compile time: a free
+-- metadata lookup finds the latest month, then a small pruned query reads the exact
+-- latest date used as the window anchor.
 
-  Two compile-time steps:
-    1. Free metadata lookup (no table scan) for the latest populated monthly
-       partition. This is only a MONTH boundary (e.g. 2024-05-01) — too coarse to
-       anchor a day-precise window on its own.
-    2. Read the true latest transaction DATE, scanning ONLY that one latest
-       partition (partition-pruned: one column, one month — negligible bytes).
-
-  The public crypto_bitcoin_cash dataset is frozen (last data ~May 2024), so
-  current_date() would select an empty future window — hence the lookup.
-#}
 {%- set latest_partition_query -%}
   select format_date('%Y-%m-%d', max(parse_date('%Y%m%d', partition_id)))
   from `{{ src.database }}.{{ src.schema }}.INFORMATION_SCHEMA.PARTITIONS`
   where table_name = '{{ src.identifier }}'
     and partition_id not in ('__NULL__', '__UNPARTITIONED__')
 {%- endset -%}
+
 
 {%- if execute -%}
   {%- set latest_month = run_query(latest_partition_query).rows[0][0] -%}
@@ -33,6 +24,7 @@
 {%- else -%}
   {%- set anchor_date = '1970-01-01' -%}
 {%- endif %}
+
 
 with source as (
   select *
