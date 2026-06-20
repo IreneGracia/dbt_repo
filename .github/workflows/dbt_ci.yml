@@ -17,22 +17,26 @@ env:
 jobs:
   dbt-run:
     name: dbt deps + run
+    #GitHub spins up a fresh, temporary and isolated VM running on Ubuntu LTS
     runs-on: ubuntu-latest
     steps:
+
+        #Clones repo onto the runner
       - name: Checkout
         uses: actions/checkout@v4
 
+        #Installs the uv package manager
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
 
-      # `uv sync` reads pyproject.toml + uv.lock, provisions the Python pinned
-      # in .python-version, and installs the exact locked dependency versions.
+      # Reads pyproject.toml and uv.lock, provisions the python pinned
+      # in .python-version and installs the locked dependency versions.
       - name: Install dbt and dependencies
         run: uv sync
 
-      # Authenticate AS the Terraform-provisioned service account, keyless.
+      # Authenticates to GCP as the Terraform-provisioned service account.
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -42,11 +46,10 @@ jobs:
       - name: Install dbt packages
         run: uv run dbt deps
 
+        #Checks whether dbt can connect to BigQuery before the build is done
       - name: Verify connection
         run: uv run dbt debug --target ci
 
-      # `dbt build` runs models AND tests (and seeds/snapshots) in DAG order,
-      # so a failing data test — e.g. a coinbase address leaking into the mart —
-      # fails the job and blocks the PR. (`dbt run` alone would skip the tests.)
+      # Runs models and tests
       - name: dbt build
         run: uv run dbt build --target ci

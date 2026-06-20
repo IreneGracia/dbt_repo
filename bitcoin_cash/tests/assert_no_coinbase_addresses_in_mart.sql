@@ -1,8 +1,7 @@
--- Singular test: the data mart must NEVER contain an address that ever appeared
--- in a coinbase (newly-minted / miner-reward) transaction. This is the core
--- business rule of mart_model, so we assert it directly.
---
--- A dbt test passes when it returns ZERO rows. Any row returned here is an
+-- The data mart must not contain an address that ever appeared
+-- in a coinbase transaction.
+
+-- A dbt test passes when it returns zero rows. Any row returned here is an
 -- address that leaked past the coinbase exclusion in mart_model, which fails
 -- the test (and, in CI, the pull request).
 
