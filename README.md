@@ -131,23 +131,23 @@ One row per address, materialised as a table in the `mart` dataset, the consumab
 
 Beyond models and tests, the project uses these dbt building blocks:
 
-- **Source** — [`sources.yml`](bitcoin_cash/models/sources.yml) declares the public
+- **Source**: [`sources.yml`](bitcoin_cash/models/sources.yml) declares the public
   `bigquery-public-data.crypto_bitcoin_cash.transactions` table as a dbt source.
   Models reference it via `{{ source('crypto_bitcoin_cash', 'transactions') }}` instead
   of hard-coding the path.
 
-- **Macro** — [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql)
+- **Macro**: [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql)
   overrides dbt's built-in `generate_schema_name`. By default dbt names schemas
   `<target>_<custom>` (e.g. `staging_staging`); this override uses the configured
   `+schema`, so models land in the bare `staging` / `mart` datasets that
   Terraform created. Separately, `staging_model` uses inline Jinja + `run_query` at compile time to resolve its 3-month anchor date.
 
-- **Package** — [`packages.yml`](packages.yml) declares `dbt_utils` (dbt Labs' standard
+- **Package**: [`packages.yml`](packages.yml) declares `dbt_utils` (dbt Labs' standard
   helper package). `dbt deps` installs it into `dbt_packages/` (git-ignored), and CI runs
   `dbt deps` before `dbt build`. It supplies the `dbt_utils.expression_is_true` generic
   test used on the staging model.
 
-- **Materialisations** — both models are materialised as tables, so the mart and staging outputs persist as queryable BigQuery tables.
+- **Materialisations**: both models are materialised as tables, so the mart and staging outputs persist as queryable BigQuery tables.
 
 
 ## Prerequisites
