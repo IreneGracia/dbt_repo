@@ -7,16 +7,35 @@ and a per-address balance mart, tested and CI-validated on every pull request.
 > `staging`/`mart` datasets and the `dbt-runner` service account (plus the CI
 > credentials) that this project depends on.
 
-## Data flow
+## What this project does
+
+**Inflow.** Reads the public, append-only Bitcoin Cash ledger
+(`bigquery-public-data.crypto_bitcoin_cash.transactions`) — one row per transaction,
+each carrying nested `inputs` (coins being spent), nested `outputs` (coins being
+received), the block timestamp, and an `is_coinbase` flag (true for mined/block-reward
+transactions). This source is read-only and never modified.
+
+**Transform.**
+1. **`staging_model`** narrows the firehose to a **strict last-3-months** slice,
+   partition-pruned so it stays in the free tier — a clean, time-bounded copy of the
+   raw transactions.
+2. **`mart_model`** turns those transactions into an **address ledger**: it unnests
+   every output (`+value` received) and every input (`−value` spent), sums them per
+   address to get a **net balance**, and excludes any address that ever received a
+   coinbase (mined) payout.
+
+**Outflow.** **`mart.mart_model`** — one row per address with its net balance — is the
+consumable product, ready to feed BI dashboards or ML features. `staging.staging_model`
+is the intermediate layer the mart is built from.
 
 ```
-bigquery-public-data.crypto_bitcoin_cash.transactions
+bigquery-public-data.crypto_bitcoin_cash.transactions   ← inflow (read-only source)
         │   staging_model  — strict last 3 months, partition-pruned
         ▼
-   staging.staging_model
-        │   mart_model     — net balance per address, coinbase addresses excluded
-        ▼
-     mart.mart_model
+   staging.staging_model                                  (intermediate)
+        │   mart_model     — unnest inputs/outputs → net balance per address,
+        ▼                     coinbase addresses excluded
+     mart.mart_model                                       → outflow (BI / ML consumes this)
 ```
 
 ## Models
