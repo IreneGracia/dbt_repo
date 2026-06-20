@@ -42,40 +42,39 @@ is the intermediate layer the mart is built from.
 
 ### `staging_model`
 
-**Purpose.** Produce a clean, partition-pruned copy of just the **last three
-months** of raw transactions — the foundation the mart is built on, and the layer
-that keeps every downstream query inside the free tier.
+**Purpose.** Produce a clean, partition-pruned copy of the last three
+months of raw transactions.
 
-**How the window is anchored (the tricky part).** The window can't use
-`current_date()`, because the public dataset is **frozen** (~May 2024) — so "now
+**How the window is anchored** The window can't use
+`current_date()`, because the public dataset is frozen (~May 2024) so "now
 minus 3 months" would select an empty future range. Instead the anchor is computed
-at **compile time** in two cheap steps:
+at compile time in two cheap steps:
 1. A **metadata-only** query against `INFORMATION_SCHEMA.PARTITIONS` finds the
-   latest populated monthly partition (free — no table scan). This is only a *month*
+   latest populated monthly partition (free, no table scan). This is only a month
    boundary, too coarse for a day-precise window.
 2. A **partition-pruned** query reads `max(date(block_timestamp))` from just that
-   one latest partition — the true latest transaction date (negligible bytes).
+   one latest partition and finds the true latest transaction date (negligible bytes).
 
 That date becomes `anchor_date`, embedded as a literal in the model's SQL.
 
 **The filter.** Two predicates do the work:
-- `block_timestamp_month >= date_trunc(anchor_date - 3 months, month)` — prunes whole
+- `block_timestamp_month >= date_trunc(anchor_date - 3 months, month)`: prunes whole
   partitions outside the window so BigQuery scans the minimum.
-- `block_timestamp >= anchor_date - 3 months` — the strict, day-precise cutoff.
+- `block_timestamp >= anchor_date - 3 months`: the strict, day-precise cutoff.
 
-**Output schema.** A passthrough of the source schema (`select *`), materialized as a
+**Output schema.** A passthrough of the source schema (`select *`), materialised as a
 **table** in the `staging` dataset. The columns the rest of the project relies on:
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `hash` | STRING | Transaction hash — the unique key (tested `unique` + `not_null`). |
+| `hash` | STRING | Transaction hash: the unique key (tested `unique` + `not_null`). |
 | `block_timestamp` | TIMESTAMP | Block mining time (shared by all txns in a block); drives the 3-month window. |
 | `block_timestamp_month` | DATE | Month-truncated partition column used for pruning. |
 | `is_coinbase` | BOOL | True for mined / block-reward transactions; drives the mart exclusion. |
-| `inputs` | ARRAY&lt;STRUCT&gt; | Nested; each element has `addresses` and `value` (coins **spent**). |
-| `outputs` | ARRAY&lt;STRUCT&gt; | Nested; each element has `addresses` and `value` (coins **received**). |
+| `inputs` | ARRAY&lt;STRUCT&gt; | Nested; each element has `addresses` and `value` (coins spent). |
+| `outputs` | ARRAY&lt;STRUCT&gt; | Nested; each element has `addresses` and `value` (coins received). |
 
-(Plus all other raw columns — `block_number`, `fee`, `size`, `input_count`, … — carried through unchanged.)
+All other raw columns (`block_number`, `fee`, `size`, `input_count`, etc.) are carried through unchanged.
 
 ### `mart_model` — a per-address balance ledger
 
@@ -120,42 +119,36 @@ dataset — the consumable product:
 | `not_null` on `mart.address` | built-in generic | No null addresses. |
 | `not_null` on `mart.balance` | built-in generic | Every address has a computed balance. |
 | [`assert_no_coinbase_addresses_in_mart`](bitcoin_cash/tests/assert_no_coinbase_addresses_in_mart.sql) | singular (custom) | **Core rule:** no coinbase address leaked into the mart. |
-| [`assert_staging_within_three_months`](bitcoin_cash/tests/assert_staging_within_three_months.sql) | singular (custom) | No transaction older than 3 months before the latest — enforces the strict window. |
+| [`assert_staging_within_three_months`](bitcoin_cash/tests/assert_staging_within_three_months.sql) | singular (custom) | No transaction older than 3 months before the latest: enforces the strict window. |
 
-> `hash` is a BigQuery reserved word, so its tests use `quote: true` to force backtick-quoting.
 
 ## Sources, macros & packages
 
 Beyond models and tests, the project uses these dbt building blocks:
 
 - **Source** — [`sources.yml`](bitcoin_cash/models/sources.yml) declares the public
-  `bigquery-public-data.crypto_bitcoin_cash.transactions` table as a dbt *source*.
+  `bigquery-public-data.crypto_bitcoin_cash.transactions` table as a dbt source.
   Models reference it via `{{ source('crypto_bitcoin_cash', 'transactions') }}` instead
-  of hard-coding the path, which gives dbt-tracked **lineage** from the raw table to the
-  mart and a single place to change the source.
+  of hard-coding the path.
 
 - **Macro** — [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql)
   overrides dbt's built-in `generate_schema_name`. By default dbt names schemas
   `<target>_<custom>` (e.g. `staging_staging`); this override uses the configured
-  `+schema` verbatim, so models land in the **bare `staging` / `mart` datasets** that
-  Terraform created (the service account can write to those but can't create new ones).
-  Separately, `staging_model` uses inline **Jinja + `run_query`** at compile time to
-  resolve its 3-month anchor date.
+  `+schema`, so models land in the bare `staging` / `mart` datasets that
+  Terraform created. Separately, `staging_model` uses inline Jinja + `run_query` at compile time to resolve its 3-month anchor date.
 
-- **Package** — [`packages.yml`](packages.yml) declares **`dbt_utils`** (dbt Labs' standard
+- **Package** — [`packages.yml`](packages.yml) declares `dbt_utils` (dbt Labs' standard
   helper package). `dbt deps` installs it into `dbt_packages/` (git-ignored), and CI runs
   `dbt deps` before `dbt build`. It supplies the `dbt_utils.expression_is_true` generic
   test used on the staging model.
 
-- **Materializations** — both models are materialized as **tables** (set in
-  [`dbt_project.yml`](dbt_project.yml)), so the mart and staging outputs persist as
-  queryable BigQuery tables rather than views.
+- **Materialisations** — both models are materialised as tables, so the mart and staging outputs persist as queryable BigQuery tables.
 
 ## Prerequisites
 
-- **uv** — https://docs.astral.sh/uv/getting-started/installation/ — provisions Python 3.12.9 + dbt; no separate Python install needed.
-- **gcloud** — https://cloud.google.com/sdk/docs/install — for local Application Default Credentials.
-- The GCP project + datasets from `terraform_repo`, and a Google identity with BigQuery access (project **Owner**, which you get by creating it, suffices). Locally you run **as yourself**, not the service account.
+- **uv**: https://docs.astral.sh/uv/getting-started/installation/ provisions Python 3.12.9 + dbt; no separate Python install needed.
+- **gcloud**: https://cloud.google.com/sdk/docs/install — for local Application Default Credentials.
+- The GCP project + datasets from `terraform_repo`, and a Google identity with BigQuery access (project Owner suffices). Local runs happen as users, not the service account.
 
 ## Run locally
 
@@ -168,25 +161,24 @@ gcloud auth application-default login
 export DBT_BIGQUERY_PROJECT="blockchain-cash-analysis"
 export DBT_BIGQUERY_DATASET="staging"
 
-uv run dbt debug                     # verify config + connection (fail-fast)
-uv run dbt build                     # build models AND run all tests
+uv run dbt debug                     # verify config + connection
+uv run dbt build                     # build models and run all tests
 ```
 
-`dbt build` runs models and tests in dependency order; `dbt run` + `dbt test`
-separately also works. Append `--target ci` to use the CI profile.
+Append `--target ci` to use the CI profile.
 
 ## Continuous Integration
 
 [`.github/workflows/dbt_ci.yml`](.github/workflows/dbt_ci.yml) runs on every PR to `main`/`master`:
 
 1. `uv sync` — install dbt and dependencies.
-2. **Keyless auth** to GCP via Workload Identity Federation, as the `dbt-runner` SA. The WIF provider, SA email, project id, and location are injected by Terraform — no manual GitHub setup.
-3. `dbt deps` → `dbt debug` → **`dbt build`** — so a failing test (e.g. a coinbase address in the mart) fails the job and blocks the merge.
+2. Keyless auth to GCP via Workload Identity Federation, as the `dbt-runner` SA. The WIF provider, SA email, project id, and location are injected by Terraform: no manual GitHub setup.
+3. `dbt deps` → `dbt debug` → `dbt build` — so a failing test (e.g. a coinbase address in the mart) fails the job and blocks the merge.
 
 ## Configuration
 
-- [`profiles.yml`](profiles.yml) — committed and **fully env-var driven (no secrets)**, with two targets: `dev` (default, local, authenticates as you) and `ci` (the pipeline, authenticates as the SA).
-- [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql) — overrides dbt's default `<target>_<schema>` naming so models land in the bare `staging`/`mart` datasets Terraform created.
+- [`profiles.yml`](profiles.yml): committed and fully env-var driven (no secrets), with two targets: `dev` (default, local, authenticates as you) and `ci` (the pipeline, authenticates as the SA).
+- [`generate_schema_name.sql`](bitcoin_cash/macros/generate_schema_name.sql): overrides dbt's default `<target>_<schema>` naming so models land in the bare `staging`/`mart` datasets Terraform created.
 
 ## Project structure
 
@@ -208,7 +200,5 @@ dbt_repo/
 
 ## Design choices
 
-- **Strict 3-month window**, anchored to the latest transaction date — literal to the brief and free-tier friendly.
-- **Coinbase exclusion via a NULL-safe `NOT IN`** — unnested addresses can be null, and an unguarded `NOT IN` against a set containing null returns nothing; the `where address is not null` subquery filter avoids that trap.
-- **Three test layers** — built-in generic, package generic (`dbt_utils`), and singular custom — covering keys, partition integrity, the window, and the core coinbase rule.
-- **Keyless CI** and **env-var-only profiles** — no secrets in version control.
+- **Three test layers**: built-in generic, package generic (`dbt_utils`), and singular custom covering keys, partition integrity, the window, and the core coinbase rule.
+- **Keyless CI** and **env-var-only profiles**: no secrets in version control.
