@@ -42,11 +42,11 @@ is the intermediate layer the mart is built from.
 
 ### `staging_model`
 
-**Purpose.** Produce a clean, partition-pruned copy of the last three
-months of raw transactions.
+**Purpose.** 
+Produce a clean, partition-pruned copy of the last three months of raw transactions.
 
-**How the window is anchored** The window can't use
-`current_date()`, because the public dataset is frozen (~May 2024) so "now
+**How the window is anchored** 
+The window can't use `current_date()`, because the public dataset is frozen (~May 2024) so "now
 minus 3 months" would select an empty future range. Instead the anchor is computed
 at compile time in two cheap steps:
 1. A **metadata-only** query against `INFORMATION_SCHEMA.PARTITIONS` finds the
@@ -57,13 +57,14 @@ at compile time in two cheap steps:
 
 That date becomes `anchor_date`, embedded as a literal in the model's SQL.
 
-**The filter.** Two predicates do the work:
+**The filter.** 
+Two predicates do the work:
 - `block_timestamp_month >= date_trunc(anchor_date - 3 months, month)`: prunes whole
   partitions outside the window so BigQuery scans the minimum.
 - `block_timestamp >= anchor_date - 3 months`: the strict, day-precise cutoff.
 
-**Output schema.** A passthrough of the source schema (`select *`), materialised as a
-**table** in the `staging` dataset. The columns the rest of the project relies on:
+**Output schema.** 
+A passthrough of the source schema (`select *`), materialised as a table in the `staging` dataset. The columns the rest of the project relies on:
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -76,33 +77,33 @@ That date becomes `anchor_date`, embedded as a literal in the model's SQL.
 
 All other raw columns (`block_number`, `fee`, `size`, `input_count`, etc.) are carried through unchanged.
 
-### `mart_model` — a per-address balance ledger
+### `mart_model`
 
-**Purpose.** Collapse transactions into **one row per address** with its net balance,
+**Purpose.** 
+Collapse transactions into **one row per address** with its net balance,
 excluding addresses tied to coinbase (mined) coins. Built entirely from
 `staging_model`, so it inherits the 3-month window.
 
-**How it works** (four CTEs):
-1. **`coinbase_addresses`** — unnests the `outputs` of every `is_coinbase = true`
-   transaction to collect every address that ever received freshly-minted coins.
+**How it works**
+1. **`coinbase_addresses`**: unnests the `outputs` of every `is_coinbase = true`
+   transaction to collect every address that ever received coinbase transactions.
    These are the addresses to exclude.
-2. **`ledger`** — turns transactions into signed amounts per address:
-   - unnest `outputs` → `+value` (coins **received** by an address), and
-   - unnest `inputs` → `−value` (coins that address **spent**),
+2. **`ledger`**: turns transactions into signed amounts per address:
+   - unnest `outputs` → `+value` (coins received by an address), and
+   - unnest `inputs` → `−value` (coins that address spent),
    combined with `UNION ALL`. (In Bitcoin Cash, an input spends a prior output, so
    inputs carry the spender's address and value.)
-3. **`balances`** — `sum(amount)` grouped by address = the net balance over the window.
-4. **Final select** — returns `address, balance`, excluding coinbase addresses with a
-   **NULL-safe `NOT IN`** (`where address is not null` inside the subquery — see Design
-   choices for why this matters).
+3. **`balances`**: `sum(amount)` grouped by address = the net balance over the window.
+4. **Final select**: returns `address, balance`, excluding coinbase addresses with a
+   NULL-safe `NOT IN` (`where address is not null` inside the subquery).
 
-**Output schema.** One row per address, materialized as a **table** in the `mart`
-dataset — the consumable product:
+**Output schema.** 
+One row per address, materialised as a table in the `mart` dataset, the consumable product:
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `address` | STRING | Bitcoin Cash address (unique, not null). |
-| `balance` | NUMERIC | Net balance in **satoshis** over the staged window = Σ(received) − Σ(spent). Can be negative if an address spent more than it received within the window. |
+| `balance` | NUMERIC | Net balance over the staged window = Σ(received) − Σ(spent)|
 
 ## Tests
 
