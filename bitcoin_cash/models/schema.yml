@@ -6,6 +6,12 @@ models:
       Last three months of raw Bitcoin Cash transactions from the public
       `bigquery-public-data.crypto_bitcoin_cash.transactions` table. Filtered to
       the recent monthly partitions so queries stay within the BigQuery free tier.
+    data_tests:
+      # Partition-column integrity: the monthly partition column must match the
+      # actual timestamp's month, otherwise the partition pruning that keeps the
+      # staging query in the free tier can't be trusted. (dbt_utils package.)
+      - dbt_utils.expression_is_true:
+          expression: "block_timestamp_month = date(timestamp_trunc(block_timestamp, month))"
     columns:
       - name: hash
         # `hash` is a reserved keyword in BigQuery, so dbt must quote it

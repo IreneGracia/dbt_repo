@@ -1,15 +1,17 @@
-Welcome to your new dbt project!
+# bitcoin_cash — dbt project package
 
-### Using the starter project
+This folder is the dbt project package itself (models, tests, macros, sources).
+The project root is one level up, where `dbt_project.yml` lives.
 
-Try running the following commands:
-- dbt run
-- dbt test
+**For setup, authentication, and run instructions, see the
+[dbt_repo README](../README.md).**
 
+## Contents
 
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+- `models/staging/` — `staging_model`: last 3 months of transactions.
+- `models/mart/` — `mart_model`: per-address balance, coinbase addresses excluded.
+- `models/sources.yml` — declaration of the public source table.
+- `models/schema.yml` — model/column documentation and tests.
+- `tests/` — singular (custom-SQL) data tests.
+- `macros/` — `generate_schema_name` override so models land in the bare
+  `staging` / `mart` datasets created by Terraform.
