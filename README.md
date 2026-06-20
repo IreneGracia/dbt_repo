@@ -30,6 +30,7 @@ consumable product, ready to feed BI dashboards or ML features. `staging_model`
 is the intermediate layer the mart is built from.
 
 
+
 ## Models
 
 | Model | Materialised | Description |
@@ -39,6 +40,7 @@ is the intermediate layer the mart is built from.
 
 
 **Assumption: windowed balance.** Staging is limited to 3 months to stay in the free tier, so the mart balance is the net change over those 3 months, not an address's all-time balance (which would require scanning full history). This is the deliberate, free-tier-consistent reading of the brief's "current balance".
+
 
 ### `staging_model`
 
